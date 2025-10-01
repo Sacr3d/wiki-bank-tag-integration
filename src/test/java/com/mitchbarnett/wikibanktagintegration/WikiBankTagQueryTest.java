@@ -1,6 +1,5 @@
 package com.mitchbarnett.wikibanktagintegration;
 
-import com.mitchbarnett.wikibanktagintegration.WikiBankTagIntegrationPlugin;
 import okhttp3.OkHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
@@ -10,7 +9,6 @@ import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 public class WikiBankTagQueryTest {
 
@@ -52,7 +50,7 @@ public class WikiBankTagQueryTest {
             latch.countDown();
         });
 
-        boolean completed = latch.await(10, TimeUnit.SECONDS);
+        boolean completed = latch.await(20, TimeUnit.SECONDS);
         Assert.assertTrue("Timeout waiting for responses", completed);
 
         Assert.assertTrue("Failed to query by category 'ores'", oresResult.get());
@@ -62,13 +60,20 @@ public class WikiBankTagQueryTest {
 
     @Test
     public void testQueryByMonster() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(3);
+        CountDownLatch latch = new CountDownLatch(5);
         AtomicBoolean impResult = new AtomicBoolean(false);
+        AtomicBoolean dukeResult = new AtomicBoolean(false);
         AtomicBoolean runeDragonResult1 = new AtomicBoolean(false);
         AtomicBoolean runeDragonResult2 = new AtomicBoolean(false);
+        AtomicBoolean fakeMonster = new AtomicBoolean(false);
 
         plugin.getDropIDs("imp", ids -> {
             impResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        plugin.getDropIDs("Duke Sucellus", ids -> {
+            dukeResult.set(ids.length > 0);
             latch.countDown();
         });
 
@@ -82,11 +87,21 @@ public class WikiBankTagQueryTest {
             latch.countDown();
         });
 
-        boolean completed = latch.await(10, TimeUnit.SECONDS);
+        plugin.getDropIDs("Fake_monster", ids -> {
+            fakeMonster.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        boolean completed = latch.await(20, TimeUnit.SECONDS);
         Assert.assertTrue("Timeout waiting for responses", completed);
 
         Assert.assertTrue("Failed to query by monster 'imp'", impResult.get());
+        Assert.assertTrue("Failed to query by monster 'Duke Sucellus'", dukeResult.get());
         Assert.assertTrue("Failed to query by monster 'Rune dragon'", runeDragonResult1.get());
-        Assert.assertTrue("Failed to query by monster 'Rune_dragon'", runeDragonResult2.get());
+        Assert.assertFalse(
+                "Monster'Rune_dragon', which is the legacy api, is now returning results",
+                runeDragonResult2.get()
+        ); // No longer valid
+        Assert.assertFalse("Queried a 'Fake_monster' and got a result!", fakeMonster.get());
     }
 }
