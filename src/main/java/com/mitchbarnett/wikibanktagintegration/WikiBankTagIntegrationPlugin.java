@@ -199,7 +199,7 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
      * @return A list of Item IDs found for the provided category.
      */
     public void getCategoryIDs(String category, Consumer<int[]> callback) {
-        String safeQuery = StringEscapeUtils.escapeEcmaScript(category);
+        String safeQuery = getNormalisedQuery(category);
         String query = String.format("bucket('item_id').select('item_id.id').where('Category:%s')", safeQuery);
         getWikiResponse(query, new okhttp3.Callback() {
             @Override
@@ -226,7 +226,7 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
      * @return A list of Item IDs found for the provided category.
      */
     public void getDropIDs(String monster, Consumer<int[]> callback) {
-        String safeQuery = StringEscapeUtils.escapeEcmaScript(monster);
+        String safeQuery = getNormalisedQuery(monster);
         String query = String.format("bucket('dropsline').join('item_id', 'dropsline.item_name', 'item_id.page_name').where({'dropsline.page_name','%s'}).select('item_id.id')", safeQuery);
         getWikiResponse(query, new okhttp3.Callback() {
             @Override
@@ -242,6 +242,17 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
                 callback.accept(ids);
             }
         });
+    }
+
+    /**
+     * Normalises the subject by replacing underscores with spaces
+     * and escaping it for safe use in query strings.
+     *
+     * @param subject the input string
+     * @return the normalised and escaped string
+     */
+    private static String getNormalisedQuery(String subject) {
+        return StringEscapeUtils.escapeEcmaScript(subject.replace("_", " "));
     }
 
     /**

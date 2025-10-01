@@ -30,10 +30,13 @@ public class WikiBankTagQueryTest {
 
     @Test
     public void testQueryByCategory() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(3);
+        CountDownLatch latch = new CountDownLatch(5);
         AtomicBoolean oresResult = new AtomicBoolean(false);
         AtomicBoolean membersItemsResult = new AtomicBoolean(false);
         AtomicBoolean nonGEItemsResult = new AtomicBoolean(false);
+        AtomicBoolean dt2Result1Result = new AtomicBoolean(false);
+        AtomicBoolean dt2Result2Result = new AtomicBoolean(false);
+        AtomicBoolean fakeCategoryResult = new AtomicBoolean(false);
 
         plugin.getCategoryIDs("ores", ids -> {
             oresResult.set(ids.length > 0);
@@ -50,12 +53,30 @@ public class WikiBankTagQueryTest {
             latch.countDown();
         });
 
+        plugin.getCategoryIDs("Desert Treasure II - The Fallen Empire", ids -> {
+            dt2Result1Result.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        plugin.getCategoryIDs("Desert_Treasure_II_-_The_Fallen_Empire", ids -> {
+            dt2Result2Result.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        plugin.getCategoryIDs("Fake_category", ids -> {
+            fakeCategoryResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
         boolean completed = latch.await(20, TimeUnit.SECONDS);
         Assert.assertTrue("Timeout waiting for responses", completed);
 
         Assert.assertTrue("Failed to query by category 'ores'", oresResult.get());
         Assert.assertTrue("Failed to query by category 'Members' items'", membersItemsResult.get());
         Assert.assertTrue("Failed to query by category 'Non-GE items'", nonGEItemsResult.get());
+        Assert.assertTrue("Failed to query by category 'Desert Treasure II - The Fallen Empire'", dt2Result1Result.get());
+        Assert.assertTrue("Failed to query by category 'Desert_Treasure_II_-_The_Fallen_Empire'", dt2Result2Result.get());
+        Assert.assertFalse("Queried a 'Fake_category' and got a result!", fakeCategoryResult.get());
     }
 
     @Test
@@ -98,10 +119,7 @@ public class WikiBankTagQueryTest {
         Assert.assertTrue("Failed to query by monster 'imp'", impResult.get());
         Assert.assertTrue("Failed to query by monster 'Duke Sucellus'", dukeResult.get());
         Assert.assertTrue("Failed to query by monster 'Rune dragon'", runeDragonResult1.get());
-        Assert.assertFalse(
-                "Monster'Rune_dragon', which is the legacy api, is now returning results",
-                runeDragonResult2.get()
-        ); // No longer valid
+        Assert.assertTrue("Failed to query by monster 'Rune_dragon'", runeDragonResult2.get());
         Assert.assertFalse("Queried a 'Fake_monster' and got a result!", fakeMonster.get());
     }
 }
