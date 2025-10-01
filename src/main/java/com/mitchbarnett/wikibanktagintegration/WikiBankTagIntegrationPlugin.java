@@ -45,15 +45,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.Call;
-import org.apache.commons.text.StringEscapeUtils;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
-import java.util.List;
 import java.util.stream.IntStream;
 
 import static net.runelite.client.plugins.banktags.BankTagsPlugin.*;
@@ -90,9 +86,14 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
     @Subscribe
     public void onCommandExecuted(CommandExecuted commandExecuted) {
         String[] args = commandExecuted.getArguments();
-        if (commandExecuted.getCommand().equals(config.categoryChatCommand()) && args.length > 0) {
+        if (args.length < 1) {
+            // silently exit
+            return;
+        }
+
+        if (commandExecuted.getCommand().equals(config.categoryChatCommand())) {
             addTagsFromCategory(String.join(" ", args));
-        } else if (commandExecuted.getCommand().equals(config.dropsChatCommand()) && args.length > 0) {
+        } else if (commandExecuted.getCommand().equals(config.dropsChatCommand())) {
             addTagsFromDrops(String.join(" ", args));
         }
     }
@@ -199,8 +200,8 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
      * @return A list of Item IDs found for the provided category.
      */
     public void getCategoryIDs(String category, Consumer<int[]> callback) {
-        String safeQuery = getNormalisedQuery(category);
-        String query = String.format("bucket('item_id').select('item_id.id').where('Category:%s')", safeQuery);
+        String safeQuery = getNormalisedQuery(category, ArgHandler.AggregateTerms.Format.CATEGORY);
+        String query = String.format("bucket('item_id').select('item_id.id').where(%s)", safeQuery);
         getWikiResponse(query, new okhttp3.Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -226,8 +227,8 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
      * @return A list of Item IDs found for the provided category.
      */
     public void getDropIDs(String monster, Consumer<int[]> callback) {
-        String safeQuery = getNormalisedQuery(monster);
-        String query = String.format("bucket('dropsline').join('item_id', 'dropsline.item_name', 'item_id.page_name').where({'dropsline.page_name','%s'}).select('item_id.id')", safeQuery);
+        String safeQuery = getNormalisedQuery(monster, ArgHandler.AggregateTerms.Format.MONSTER);
+        String query = String.format("bucket('dropsline').join('item_id', 'dropsline.item_name', 'item_id.page_name').where(%s).select('item_id.id')", safeQuery);
         getWikiResponse(query, new okhttp3.Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -249,10 +250,11 @@ public class WikiBankTagIntegrationPlugin extends Plugin {
      * and escaping it for safe use in query strings.
      *
      * @param subject the input string
+     * @param format the format string
      * @return the normalised and escaped string
      */
-    private static String getNormalisedQuery(String subject) {
-        return StringEscapeUtils.escapeEcmaScript(subject.replace("_", " "));
+    private String getNormalisedQuery(String subject, ArgHandler.AggregateTerms.Format format) {
+        return Objects.requireNonNull(ArgHandler.parseAggregateTerms(client, subject)).toSmwString(format);
     }
 
     /**

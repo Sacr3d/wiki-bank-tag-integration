@@ -30,13 +30,15 @@ public class WikiBankTagQueryTest {
 
     @Test
     public void testQueryByCategory() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(5);
+        CountDownLatch latch = new CountDownLatch(8);
         AtomicBoolean oresResult = new AtomicBoolean(false);
         AtomicBoolean membersItemsResult = new AtomicBoolean(false);
         AtomicBoolean nonGEItemsResult = new AtomicBoolean(false);
         AtomicBoolean dt2Result1Result = new AtomicBoolean(false);
         AtomicBoolean dt2Result2Result = new AtomicBoolean(false);
         AtomicBoolean fakeCategoryResult = new AtomicBoolean(false);
+        AtomicBoolean aggregateCategoryOrResult = new AtomicBoolean(false);
+        AtomicBoolean aggregateCategoryAndResult = new AtomicBoolean(false);
 
         plugin.getCategoryIDs("ores", ids -> {
             oresResult.set(ids.length > 0);
@@ -68,6 +70,16 @@ public class WikiBankTagQueryTest {
             latch.countDown();
         });
 
+        plugin.getCategoryIDs("Melee_weapons||Ranged_weapons||Magic_weapons", ids -> {
+            aggregateCategoryOrResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        plugin.getCategoryIDs("Melee_armour&&Legs_slot_items", ids -> {
+            aggregateCategoryAndResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
         boolean completed = latch.await(20, TimeUnit.SECONDS);
         Assert.assertTrue("Timeout waiting for responses", completed);
 
@@ -77,16 +89,20 @@ public class WikiBankTagQueryTest {
         Assert.assertTrue("Failed to query by category 'Desert Treasure II - The Fallen Empire'", dt2Result1Result.get());
         Assert.assertTrue("Failed to query by category 'Desert_Treasure_II_-_The_Fallen_Empire'", dt2Result2Result.get());
         Assert.assertFalse("Queried a 'Fake_category' and got a result!", fakeCategoryResult.get());
+        Assert.assertTrue("Failed to query by category 'Melee_weapons||Ranged_weapons||Magic_weapons'", aggregateCategoryOrResult.get());
+        Assert.assertTrue("Failed to query by category 'Melee_armour&&Legs_slot_items'", aggregateCategoryAndResult.get());
     }
 
     @Test
     public void testQueryByMonster() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(5);
+        CountDownLatch latch = new CountDownLatch(7);
         AtomicBoolean impResult = new AtomicBoolean(false);
         AtomicBoolean dukeResult = new AtomicBoolean(false);
         AtomicBoolean runeDragonResult1 = new AtomicBoolean(false);
         AtomicBoolean runeDragonResult2 = new AtomicBoolean(false);
         AtomicBoolean fakeMonster = new AtomicBoolean(false);
+        AtomicBoolean dagannothOrResult = new AtomicBoolean(false);
+        AtomicBoolean dagannothAndResult = new AtomicBoolean(false);
 
         plugin.getDropIDs("imp", ids -> {
             impResult.set(ids.length > 0);
@@ -113,6 +129,16 @@ public class WikiBankTagQueryTest {
             latch.countDown();
         });
 
+        plugin.getDropIDs("Dagannoth Prime||Dagannoth Rex||Dagannoth Supreme", ids -> {
+            dagannothOrResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
+        plugin.getDropIDs("Dagannoth Prime||Dagannoth Rex||Dagannoth Supreme", ids -> {
+            dagannothAndResult.set(ids.length > 0);
+            latch.countDown();
+        });
+
         boolean completed = latch.await(20, TimeUnit.SECONDS);
         Assert.assertTrue("Timeout waiting for responses", completed);
 
@@ -121,5 +147,7 @@ public class WikiBankTagQueryTest {
         Assert.assertTrue("Failed to query by monster 'Rune dragon'", runeDragonResult1.get());
         Assert.assertTrue("Failed to query by monster 'Rune_dragon'", runeDragonResult2.get());
         Assert.assertFalse("Queried a 'Fake_monster' and got a result!", fakeMonster.get());
+        Assert.assertTrue("Failed to query by monster 'Dagannoth Prime||Dagannoth Rex||Dagannoth Supreme'", dagannothOrResult.get());
+        Assert.assertTrue("Failed to query by monster 'Dagannoth Prime&&Dagannoth Rex&&Dagannoth Supreme'", dagannothAndResult.get());
     }
 }
